@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Mood to Poem",
-  description: "감정 한 줄을 시적인 문장으로 변환하는 앱",
+  title: "AI 카피 문구 생성기",
+  description: "원하는 분위기를 입력하면 스타일별 카피 문구 5개를 생성합니다.",
 };
 
 export default function RootLayout({
