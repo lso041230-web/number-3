@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply min-h-screen bg-mist text-ink antialiased;
+}
+
+::selection {
+  @apply bg-slate-200 text-slate-800;
+}
