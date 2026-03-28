@@ -1,116 +1,114 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ChatInput } from "@/components/chat-input";
 import { ErrorState } from "@/components/error-state";
-import { LoadingCards } from "@/components/loading-cards";
-import { MoodInput } from "@/components/mood-input";
-import { PoemGrid } from "@/components/poem-grid";
-import type { GenerateResponse, PoemResult } from "@/types/poem";
-
-const INITIAL_ERROR = "";
+import { LoadingState } from "@/components/loading-state";
+import { ResultList } from "@/components/result-list";
+import type { GenerateCopyResponse } from "@/types/copy";
 
 export default function HomePage() {
   const [mood, setMood] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(INITIAL_ERROR);
-  const [data, setData] = useState<GenerateResponse | null>(null);
-  const [selectedId, setSelectedId] = useState<PoemResult["id"] | null>(null);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState<GenerateCopyResponse | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const inputError = useMemo(() => {
     const trimmed = mood.trim();
     if (!trimmed) return "분위기를 입력해 주세요.";
-    if (trimmed.length > 100) return "100자 이내로 입력해 주세요.";
+    if (trimmed.length > 100) return "분위기는 100자 이내로 입력해 주세요.";
     return "";
   }, [mood]);
 
-  const resetAll = () => {
+  const handleReset = () => {
     setMood("");
-    setData(null);
+    setResult(null);
     setSelectedId(null);
-    setError(INITIAL_ERROR);
+    setError("");
     setLoading(false);
   };
 
-  const generate = async () => {
+  const handleGenerate = async () => {
+    if (loading) return;
+
     const trimmed = mood.trim();
-    if (!trimmed || trimmed.length > 100 || loading) {
+    if (!trimmed || trimmed.length > 100) {
       setError(inputError || "입력값을 확인해 주세요.");
       return;
     }
 
     setLoading(true);
-    setError(INITIAL_ERROR);
+    setError("");
 
     try {
-      const res = await fetch("/api/generate", {
+      const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mood: trimmed }),
       });
 
-      const body = (await res.json()) as GenerateResponse & { error?: string };
-      if (!res.ok) {
-        throw new Error(body.error || "요청 처리 중 문제가 발생했습니다.");
+      const body = (await response.json()) as GenerateCopyResponse & { error?: string };
+
+      if (!response.ok) {
+        throw new Error(body.error || "카피 생성에 실패했습니다.");
       }
 
-      setData(body);
+      setResult(body);
       setSelectedId(null);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.";
-      setError(message);
-      setData(null);
+      setError(err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.");
+      setResult(null);
     } finally {
       setLoading(false);
     }
   };
 
+  const isResultScreen = loading || Boolean(result);
+
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col items-center justify-center px-5 py-10 sm:px-8 lg:px-12">
-      <div className="w-full">
-        <header className="mb-8 text-center">
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-800 sm:text-4xl">Mood to Poem</h1>
-          <p className="mt-3 text-base text-slate-500 sm:text-lg">
-            지금 마음을 적으면 다섯 가지 결의 시적 문장으로 돌려드릴게요.
-          </p>
+    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4 py-8">
+      <section className="flex flex-1 flex-col justify-center">
+        <header className="mb-6 text-center">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">AI 카피 문구 생성기</h1>
+          <p className="mt-2 text-sm text-slate-600">분위기 한 줄로, 바로 사용할 수 있는 카피 5개를 만들어 드려요.</p>
         </header>
 
-        {!data && (
-          <section className="mx-auto flex min-h-[40vh] max-w-4xl items-center justify-center">
-            <div className="w-full">
-              <MoodInput value={mood} loading={loading} onChange={setMood} onSubmit={generate} />
-              {error && <ErrorState message={error} onRetry={() => setError(INITIAL_ERROR)} />}
-            </div>
-          </section>
+        {!isResultScreen && (
+          <>
+            <ChatInput value={mood} loading={loading} onChange={setMood} onSubmit={handleGenerate} />
+            {error && <ErrorState message={error} />}
+          </>
         )}
 
-        {(loading || data) && (
-          <section className="mx-auto mt-2 w-full max-w-6xl">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-base text-slate-600 sm:text-lg">
-                입력한 분위기: <span className="font-semibold text-slate-800">{mood.trim()}</span>
-              </p>
-              <button
-                type="button"
-                onClick={resetAll}
-                disabled={loading}
-                className="h-12 rounded-xl border border-slate-300 px-5 text-sm font-semibold text-slate-700 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                다시 돌아가기
-              </button>
-            </div>
+        {isResultScreen && (
+          <section className="flex flex-1 flex-col">
+            <p className="text-sm text-slate-600">
+              입력 분위기: <span className="font-semibold text-slate-900">{mood.trim()}</span>
+            </p>
 
-            {loading && <LoadingCards />}
-            {!loading && data && (
+            {loading && <LoadingState />}
+
+            {!loading && result && (
               <>
-                <PoemGrid items={data.results} selectedId={selectedId} onSelect={setSelectedId} />
-                <p className="mt-4 text-sm text-slate-500">카드를 눌러 하나만 선택할 수 있어요.</p>
+                <ResultList items={result.results} selectedId={selectedId} onSelect={setSelectedId} />
+                <p className="mt-3 text-xs text-slate-500">카드를 탭해서 원하는 1개를 선택하세요.</p>
               </>
             )}
 
-            {error && <ErrorState message={error} onRetry={generate} />}
+            {error && <ErrorState message={error} onRetry={handleGenerate} />}
+
+            <button
+              type="button"
+              onClick={handleReset}
+              disabled={loading}
+              className="mt-6 h-12 w-full rounded-xl bg-slate-900 text-base font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+            >
+              다시 돌아가기
+            </button>
           </section>
         )}
-      </div>
+      </section>
     </main>
   );
 }
