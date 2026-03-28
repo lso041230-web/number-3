@@ -2,20 +2,26 @@
 
 type ErrorStateProps = {
   message: string;
-  onRetry: () => void;
+  onRetry?: () => void;
 };
 
 export function ErrorState({ message, onRetry }: ErrorStateProps) {
   return (
-    <div className="mt-6 w-full rounded-2xl border border-red-200 bg-red-50 p-5 text-red-800">
-      <p className="text-base">{message}</p>
-      <button
-        type="button"
-        onClick={onRetry}
-        className="mt-4 h-12 rounded-xl bg-red-600 px-5 text-sm font-semibold text-white hover:bg-red-500"
-      >
-        다시 시도
-      </button>
-    </div>
+    <section
+      className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700"
+      role="alert"
+      aria-live="assertive"
+    >
+      <p className="text-sm font-medium">{message}</p>
+      {onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-3 h-11 w-full rounded-xl bg-red-600 text-sm font-semibold text-white transition hover:bg-red-500"
+        >
+          다시 시도
+        </button>
+      )}
+    </section>
   );
 }
