@@ -48,10 +48,13 @@ export default function HomePage() {
         body: JSON.stringify({ mood: trimmed }),
       });
 
-      const body = (await response.json()) as GenerateCopyResponse & { error?: string };
+      const body = (await response.json()) as GenerateCopyResponse & {
+        message?: string;
+        error?: string;
+      };
 
       if (!response.ok) {
-        throw new Error(body.error || "카피 생성에 실패했습니다.");
+        throw new Error(body.message || body.error || "카피 생성에 실패했습니다.");
       }
 
       setResult(body);
@@ -70,13 +73,22 @@ export default function HomePage() {
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4 py-8">
       <section className="flex flex-1 flex-col justify-center">
         <header className="mb-6 text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">AI 카피 문구 생성기</h1>
-          <p className="mt-2 text-sm text-slate-600">분위기 한 줄로, 바로 사용할 수 있는 카피 5개를 만들어 드려요.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            AI 카피 문구 생성기
+          </h1>
+          <p className="mt-2 text-sm text-slate-600">
+            분위기 한 줄로, 바로 사용할 수 있는 카피 5개를 만들어 드려요.
+          </p>
         </header>
 
         {!isResultScreen && (
           <>
-            <ChatInput value={mood} loading={loading} onChange={setMood} onSubmit={handleGenerate} />
+            <ChatInput
+              value={mood}
+              loading={loading}
+              onChange={setMood}
+              onSubmit={handleGenerate}
+            />
             {error && <ErrorState message={error} />}
           </>
         )}
@@ -84,15 +96,22 @@ export default function HomePage() {
         {isResultScreen && (
           <section className="flex flex-1 flex-col">
             <p className="text-sm text-slate-600">
-              입력 분위기: <span className="font-semibold text-slate-900">{mood.trim()}</span>
+              입력 분위기:{" "}
+              <span className="font-semibold text-slate-900">{mood.trim()}</span>
             </p>
 
             {loading && <LoadingState />}
 
             {!loading && result && (
               <>
-                <ResultList items={result.results} selectedId={selectedId} onSelect={setSelectedId} />
-                <p className="mt-3 text-xs text-slate-500">카드를 탭해서 원하는 1개를 선택하세요.</p>
+                <ResultList
+                  items={result.results}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                />
+                <p className="mt-3 text-xs text-slate-500">
+                  카드를 탭해서 원하는 1개를 선택하세요.
+                </p>
               </>
             )}
 
