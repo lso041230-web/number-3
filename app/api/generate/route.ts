@@ -75,6 +75,49 @@ function normalizeResult(mood: string, parsed: z.infer<typeof responseSchema>): 
   };
 }
 
+function getOpenAIErrorInfo(error: unknown) {
+  if (error && typeof error === "object") {
+    const e = error as {
+      name?: unknown;
+      message?: unknown;
+      status?: unknown;
+      code?: unknown;
+      type?: unknown;
+      request_id?: unknown;
+      stack?: unknown;
+    };
+
+    const status = typeof e.status === "number" ? e.status : undefined;
+
+    return {
+      name: typeof e.name === "string" ? e.name : "UnknownError",
+      message: typeof e.message === "string" ? e.message : "Unknown OpenAI error",
+      status,
+      code: typeof e.code === "string" ? e.code : undefined,
+      type: typeof e.type === "string" ? e.type : undefined,
+      request_id: typeof e.request_id === "string" ? e.request_id : undefined,
+      stack: typeof e.stack === "string" ? e.stack : undefined,
+    };
+  }
+
+  return {
+    name: "UnknownError",
+    message: "Unknown OpenAI error",
+    status: undefined,
+    code: undefined,
+    type: undefined,
+    request_id: undefined,
+    stack: undefined,
+  };
+}
+
+function mapOpenAIErrorMessage(status?: number) {
+  if (status === 401 || status === 403) return "OpenAI API key is invalid or unauthorized";
+  if (status === 429) return "OpenAI rate limit or quota exceeded";
+  if (status === 400) return "Invalid OpenAI request";
+  return "OpenAI request failed";
+}
+
 export async function POST(req: Request) {
   console.info("[api/generate] request start");
 
@@ -132,8 +175,15 @@ export async function POST(req: Request) {
 
     const rawOutput = completion.output_text;
     if (!rawOutput) {
-      console.error("[api/generate] OpenAI raw failure: empty output_text", { responseId: completion.id });
-      return NextResponse.json({ error: "OpenAI request failure: empty response from model" }, { status: 500 });
+      console.error("[api/generate] OpenAI failure", {
+        name: "EmptyOutputError",
+        message: "OpenAI returned empty output_text",
+        status: undefined,
+        code: undefined,
+        type: undefined,
+        request_id: completion.id,
+      });
+      return NextResponse.json({ error: "OpenAI request failed" }, { status: 500 });
     }
 
     let parsedOutput: unknown;
@@ -160,10 +210,21 @@ export async function POST(req: Request) {
     const normalized = normalizeResult(mood, schemaCheck.data);
     return NextResponse.json(normalized);
   } catch (error) {
-    console.error("[api/generate] OpenAI raw failure", error);
-    return NextResponse.json(
-      { error: "OpenAI request failure. Please try again shortly." },
-      { status: 500 },
-    );
+    const openaiError = getOpenAIErrorInfo(error);
+
+    console.error("[api/generate] OpenAI failure", {
+      name: openaiError.name,
+      message: openaiError.message,
+      status: openaiError.status,
+      code: openaiError.code,
+      type: openaiError.type,
+      request_id: openaiError.request_id,
+      stack: openaiError.stack,
+    });
+
+    const message = mapOpenAIErrorMessage(openaiError.status);
+    const statusCode = openaiError.status && openaiError.status >= 400 ? openaiError.status : 500;
+
+    return NextResponse.json({ error: message }, { status: statusCode });
   }
 }
