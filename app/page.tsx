@@ -48,10 +48,10 @@ export default function HomePage() {
         body: JSON.stringify({ mood: trimmed }),
       });
 
-      const body = (await response.json()) as GenerateCopyResponse & { error?: string };
+      const body = (await response.json()) as GenerateCopyResponse & { message?: string; error?: string };
 
       if (!response.ok) {
-        throw new Error(body.error || "카피 생성에 실패했습니다.");
+        throw new Error(body.message || body.error || "카피 생성에 실패했습니다.");
       }
 
       setResult(body);
