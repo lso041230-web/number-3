@@ -48,12 +48,30 @@ export default function HomePage() {
         body: JSON.stringify({ mood: trimmed }),
       });
 
-      const body = (await res.json()) as GenerateResponse & { error?: string };
-      if (!res.ok) {
-        throw new Error(body.error || "요청 처리 중 문제가 발생했습니다.");
+      let parsedBody: unknown = null;
+      try {
+        parsedBody = await res.json();
+      } catch {
+        parsedBody = null;
       }
 
-      setData(body);
+      if (!res.ok) {
+        const errorMessage =
+          typeof parsedBody === "object" &&
+          parsedBody !== null &&
+          "error" in parsedBody &&
+          typeof (parsedBody as { error?: unknown }).error === "string"
+            ? (parsedBody as { error: string }).error
+            : `서버 요청 실패 (HTTP ${res.status})`;
+
+        throw new Error(errorMessage);
+      }
+
+      if (!parsedBody || typeof parsedBody !== "object" || !("results" in parsedBody)) {
+        throw new Error("서버 응답 형식이 올바르지 않습니다.");
+      }
+
+      setData(parsedBody as GenerateResponse);
       setSelectedId(null);
     } catch (err) {
       const message = err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.";
